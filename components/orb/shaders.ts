@@ -15,7 +15,6 @@ export const vertexShader = /* glsl */ `
   varying float vDisplace;
   varying float vPressure;
 
-  // 3D Simplex noise
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -66,24 +65,14 @@ export const vertexShader = /* glsl */ `
 
   void main() {
     float volume = max(u_inputVolume, u_outputVolume);
-
-    // Pressure: non-linear mapping so quiet audio still registers
     float pressure = pow(clamp(volume, 0.0, 1.0), u_pressureCurve);
-
     float seedOffset = u_seed * 0.001;
 
-    // ── SHELL: slow, constant, no audio coupling ─────────────────────────────
-    // Two low-frequency noise layers for gentle ambient breathing.
-    // Speed is fixed — audio never touches it.
     float t_shell = u_time * u_shellSpeed;
     float s1 = snoise(position * 1.2 + vec3(t_shell          + seedOffset));
     float s2 = snoise(position * 2.2 + vec3(t_shell * 0.7    + seedOffset + 1.9));
     float shellDisp = (s1 * 0.6 + s2 * 0.4) * u_shellAmplitude;
 
-    // ── INTERNAL TURBULENCE: audio-driven, phase-offset per region ───────────
-    // Phase is derived from the vertex's position on the unit sphere using a
-    // golden-ratio-weighted dot product. No two antipodal regions share a phase,
-    // so blobs interfere rather than pulse in sync (prevents the spinning look).
     vec3 normPos = normalize(position);
     float phase = dot(normPos, vec3(0.618, 0.382, 0.500)) * u_phaseSpread + seedOffset;
 
@@ -92,16 +81,16 @@ export const vertexShader = /* glsl */ `
     float t2 = snoise(position * 7.0  + vec3(t_turb * 0.65    + phase + 2.094));
     float t3 = snoise(position * 11.0 + vec3(t_turb * 0.40    + phase + 4.189));
 
-    // Relative weights keep the three frequencies in ~4:2:1 ratio.
-    // u_turbAmplitude is the overall ceiling; pressure gates how much fires.
     float blobDisp = (t1 * 0.57 + t2 * 0.29 + t3 * 0.14) * u_turbAmplitude * pressure;
 
-    float displacement = shellDisp + blobDisp;
+    float dispGain = 1.85;
+    float shellDispScaled = shellDisp * dispGain;
+    float blobDispScaled = blobDisp * dispGain;
+    float displacement = shellDispScaled + blobDispScaled;
 
     vec3 newPosition = position + normal * displacement;
 
-    // Pass only the audio-driven part to the fragment shader for coloring
-    vDisplace  = blobDisp;
+    vDisplace  = blobDispScaled;
     vPressure  = pressure;
     vNormal    = normalize(normalMatrix * normal);
     vPosition  = newPosition;
@@ -111,40 +100,74 @@ export const vertexShader = /* glsl */ `
 `;
 
 export const fragmentShader = /* glsl */ `
+  uniform vec3  u_color0;
   uniform vec3  u_color1;
   uniform vec3  u_color2;
+  uniform vec3  u_color3;
   uniform float u_time;
+  uniform float u_seed;
   uniform float u_coreBrightness;
+  uniform float u_shaderFilmGrain;
+  uniform float u_innerBloom;
+  uniform float u_rimPower;
+  uniform float u_rimIntensity;
+  uniform float u_rimDarken;
 
   varying vec3  vNormal;
   varying vec3  vPosition;
   varying float vDisplace;
   varying float vPressure;
 
+  vec3 sampleSpectrum(float t) {
+    t = clamp(t, 0.0, 1.0);
+    if (t < 0.3333333) {
+      float k = t * 3.0;
+      return mix(u_color0, u_color1, smoothstep(0.0, 1.0, k));
+    }
+    if (t < 0.6666666) {
+      float k = (t - 0.3333333) * 3.0;
+      return mix(u_color1, u_color2, smoothstep(0.0, 1.0, k));
+    }
+    float k = (t - 0.6666666) * 3.0;
+    return mix(u_color2, u_color3, smoothstep(0.0, 1.0, k));
+  }
+
   void main() {
     vec3  viewDir = normalize(cameraPosition - vPosition);
     float NdotV   = max(dot(vNormal, viewDir), 0.0);
 
-    // Fresnel rim — edge glow tightens and brightens under pressure
-    float fresnel      = pow(1.0 - NdotV, 2.5);
+    float fresnelRaw = 1.0 - NdotV;
+    float fresnel    = pow(fresnelRaw, u_rimPower);
+    float rimBand    = fresnel * smoothstep(0.12, 0.92, fresnelRaw);
     float fresnelBoost = 1.0 + vPressure * 0.8;
-    vec3  fresnelColor = mix(u_color2, vec3(1.0), 0.5) * fresnel * fresnelBoost;
 
-    // Base color driven by internal blob displacement — slow ambient sine keeps
-    // it alive even at silence, pressure shifts it toward secondary hue
-    float blend     = clamp(vDisplace * 8.0 + 0.5 + sin(u_time * 0.2) * 0.08, 0.0, 1.0);
-    vec3  baseColor = mix(u_color1, u_color2, blend);
+    float blend = clamp(vDisplace * 8.0 + 0.5 + sin(u_time * 0.2) * 0.08, 0.0, 1.0);
+    float tSpec = clamp(
+      blend * 0.45 + NdotV * 0.22 + fresnelRaw * 0.38 + sin(u_time * 0.15) * 0.04,
+      0.0,
+      1.0
+    );
+    vec3 baseColor = sampleSpectrum(tSpec);
+    baseColor *= (1.0 - u_rimDarken * rimBand);
 
-    // Core inner glow — amplified by pressure, not by a flat audio add
-    float coreShape  = pow(NdotV, 4.0);
-    float coreBoost  = 1.0 + vPressure * 1.2;
-    vec3  coreColor  = u_color1 * coreShape * coreBoost * 0.5;
+    vec3 rimColor = mix(u_color2, u_color3, 0.55) * rimBand * u_rimIntensity * fresnelBoost;
+
+    float coreBoost = 1.0 + vPressure * 1.2;
+    float innerMix = u_innerBloom * (0.32 + vPressure * 0.68);
+    float innerWide  = pow(NdotV, 1.65) * innerMix * 0.42;
+    float innerTight = pow(NdotV, 11.0) * innerMix * 1.35;
+    vec3 coreWide  = sampleSpectrum(0.12) * innerWide * coreBoost;
+    vec3 coreTight = sampleSpectrum(0.28) * innerTight * coreBoost * 1.1;
 
     float brightness = u_coreBrightness / 100.0;
-    vec3  finalColor = (baseColor + fresnelColor + coreColor) * brightness;
-
-    // Gentle overall brightening under pressure — not a linear volume add
+    vec3 finalColor = (baseColor + rimColor + coreWide + coreTight) * brightness;
     finalColor *= 1.0 + vPressure * 0.25;
+
+    float tFilm = floor(u_time * 20.0);
+    vec2 fgc = gl_FragCoord.xy + vec2(u_seed * 0.01, u_seed * 0.007) + tFilm * 0.5;
+    float filmHash = fract(sin(dot(fgc, vec2(12.9898, 78.233))) * 43758.5453);
+    finalColor += (filmHash - 0.5) * u_shaderFilmGrain;
+    finalColor = max(finalColor, 0.0);
 
     gl_FragColor = vec4(finalColor, 0.95);
   }

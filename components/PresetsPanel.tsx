@@ -9,6 +9,7 @@ interface PresetsPanelProps {
   activePreset: string | null;
   micStatus: string;
   level: number;
+  speaking: boolean;
   agentState: string;
   onPresetSelect: (name: string, config: OrbConfig) => void;
   onMicToggle: () => void;
@@ -55,6 +56,7 @@ export function PresetsPanel({
   activePreset,
   micStatus,
   level,
+  speaking,
   agentState,
   onPresetSelect,
   onMicToggle,
@@ -63,7 +65,7 @@ export function PresetsPanel({
   const micLive = micStatus === "live";
 
   const stateLabel =
-    micLive && level > 0.03
+    micLive && speaking
       ? "SPEAKING / ACTIVE"
       : micLive
       ? "LISTENING / STILL"
@@ -132,8 +134,8 @@ export function PresetsPanel({
         </button>
 
         <div
-          className={micLive && level > 0.03 ? "ph-hi" : "ph-lo"}
-          style={{ fontSize: 10, letterSpacing: "0.08em" }}
+          className={micLive && speaking ? "ph-hi" : "ph-lo"}
+          style={{ fontSize: 10, letterSpacing: "0.08em", transition: "color 0.35s ease" }}
         >
           {stateLabel}
         </div>

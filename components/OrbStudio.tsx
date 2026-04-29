@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { Orb } from "@/components/orb/Orb";
-import { CRTOrbFrame } from "@/components/CRTOrbFrame";
 import { Equalizer } from "@/components/Equalizer";
 import { PresetsPanel } from "@/components/PresetsPanel";
 import { ControlPanel } from "@/components/ControlPanel";
+import { GlobalCRTOverlay } from "@/components/GlobalCRTOverlay";
 import { TerminalScreen } from "@/components/TerminalScreen";
 import { useMicrophoneInput } from "@/hooks/useMicrophoneInput";
 import { DEFAULT_CONFIG } from "@/lib/presets";
+import { normalizeOrbConfig, normalizeOrbColors } from "@/lib/orbConfigNormalize";
+import { SPEAKING_THRESHOLD, SPEAKING_LEVEL_RELEASE } from "@/lib/micUiThresholds";
 import type { OrbConfig } from "@/lib/types";
 
 /* ── Blink cursor used in header ─────────────────────────────────── */
@@ -24,7 +26,7 @@ function BlinkCursor() {
 }
 
 export function OrbStudio() {
-  const [config, setConfig] = useState<OrbConfig>({ ...DEFAULT_CONFIG });
+  const [config, setConfig] = useState<OrbConfig>(() => normalizeOrbConfig(DEFAULT_CONFIG));
   const [activePreset, setActivePreset] = useState<string | null>("CRT Cyan");
 
   const inputVolumeRef = useRef(0);
@@ -38,17 +40,45 @@ export function OrbStudio() {
 
   inputVolumeRef.current = mic.level;
 
+  /** Hysteresis for SPEAKING / LISTENING labels only — does not affect `mic.level` or the orb. */
+  const uiSpeakingRef = useRef(false);
+  const [uiSpeaking, setUiSpeaking] = useState(false);
+
+  useEffect(() => {
+    if (!mic.enabled) {
+      if (uiSpeakingRef.current) {
+        uiSpeakingRef.current = false;
+        setUiSpeaking(false);
+      }
+      return;
+    }
+    const lv = mic.level;
+    let next = uiSpeakingRef.current;
+    if (lv >= SPEAKING_THRESHOLD) next = true;
+    else if (lv <= SPEAKING_LEVEL_RELEASE) next = false;
+    if (next !== uiSpeakingRef.current) {
+      uiSpeakingRef.current = next;
+      setUiSpeaking(next);
+    }
+  }, [mic.enabled, mic.level]);
+
   const agentState = mic.enabled
-    ? mic.level > 0.03 ? "speaking" : "listening"
+    ? uiSpeaking ? "speaking" : "listening"
     : null;
 
   const handleConfigChange = useCallback((partial: Partial<OrbConfig>) => {
-    setConfig((prev) => ({ ...prev, ...partial }));
+    setConfig((prev) => {
+      const next = { ...prev, ...partial };
+      if (partial.colors !== undefined) {
+        next.colors = normalizeOrbColors(partial.colors);
+      }
+      return next;
+    });
     setActivePreset(null);
   }, []);
 
   const handlePresetSelect = useCallback((name: string, presetConfig: OrbConfig) => {
-    setConfig({ ...presetConfig });
+    setConfig(normalizeOrbConfig(presetConfig));
     setActivePreset(name);
   }, []);
 
@@ -58,7 +88,7 @@ export function OrbStudio() {
   }, [mic]);
 
   const handleExport = useCallback(() => {
-    const json = JSON.stringify(config, null, 2);
+    const json = JSON.stringify(normalizeOrbConfig(config), null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -97,10 +127,10 @@ export function OrbStudio() {
 
           <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
             <span
-              className={mic.level > 0.03 ? "ph-hi" : "ph-lo"}
+              className={mic.enabled && uiSpeaking ? "ph-hi" : "ph-lo"}
               style={{ fontSize: 10, letterSpacing: "0.12em" }}
             >
-              {mic.level > 0.03 ? "◉ SPEAKING" : mic.enabled ? "○ LISTENING" : "○ IDLE"}
+              {mic.enabled && uiSpeaking ? "◉ SPEAKING" : mic.enabled ? "○ LISTENING" : "○ IDLE"}
             </span>
             <span className="ph-lo" style={{ fontSize: 10, letterSpacing: "0.1em" }}>
               PRESET: <span className="ph-mid">{activePreset ?? "CUSTOM"}</span>
@@ -116,7 +146,7 @@ export function OrbStudio() {
         </div>
 
         {/* ── Three-column body ────────────────────────────────────── */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <div style={{ flex: 1, display: "flex", overflow: "visible", minHeight: 0 }}>
 
           {/* ── Left panel ──────────────────────────────────────── */}
           <div
@@ -144,6 +174,7 @@ export function OrbStudio() {
               activePreset={activePreset}
               micStatus={mic.status}
               level={mic.level}
+              speaking={uiSpeaking}
               agentState={agentState ?? "idle"}
               onPresetSelect={handlePresetSelect}
               onMicToggle={handleMicToggle}
@@ -164,34 +195,40 @@ export function OrbStudio() {
           <div
             style={{
               flex: 1,
+              minWidth: 0,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              overflow: "hidden",
+              overflow: "visible",
               background: config.background,
               position: "relative",
+              padding: "16px 32px 24px",
             }}
           >
-            <CRTOrbFrame config={config}>
-              <Orb
-                colors={config.colors}
-                getInputVolume={() => inputVolumeRef.current}
-                getOutputVolume={() => outputVolumeRef.current}
-                agentState={agentState}
-                seed={12345}
-                size={config.size}
-                fluid={{
-                  shellAmplitude: config.shellAmplitude,
-                  shellSpeed:     config.shellSpeed,
-                  turbAmplitude:  config.turbAmplitude,
-                  turbSpeed:      config.turbSpeed,
-                  pressureCurve:  config.pressureCurve,
-                  phaseSpread:    config.phaseSpread,
-                  coreBrightness: config.coreBrightness,
-                }}
-              />
-            </CRTOrbFrame>
+            <Orb
+              colors={config.colors}
+              look={{
+                shaderFilmGrain: config.shaderFilmGrain,
+                innerBloom:      config.innerBloom,
+                rimPower:        config.rimPower,
+                rimIntensity:    config.rimIntensity,
+                rimDarken:       config.rimDarken,
+              }}
+              getInputVolume={() => inputVolumeRef.current}
+              getOutputVolume={() => outputVolumeRef.current}
+              seed={12345}
+              size={config.size}
+              fluid={{
+                shellAmplitude: config.shellAmplitude,
+                shellSpeed:     config.shellSpeed,
+                turbAmplitude:  config.turbAmplitude,
+                turbSpeed:      config.turbSpeed,
+                pressureCurve:  config.pressureCurve,
+                phaseSpread:    config.phaseSpread,
+                coreBrightness: config.coreBrightness,
+              }}
+            />
 
             {/* Status readout */}
             <div
@@ -200,16 +237,16 @@ export function OrbStudio() {
                 fontSize: 10,
                 letterSpacing: "0.22em",
                 fontFamily: "inherit",
-                color: mic.level > 0.03 ? config.colors[1] : "rgba(255,255,255,0.12)",
-                textShadow: mic.level > 0.03
+                color: mic.enabled && uiSpeaking ? config.colors[1] : "rgba(255,255,255,0.12)",
+                textShadow: mic.enabled && uiSpeaking
                   ? `0 0 6px ${config.colors[1]}, 0 0 16px ${config.colors[1]}66`
                   : "none",
-                transition: "color 0.3s, text-shadow 0.3s",
+                transition: "color 0.35s ease, text-shadow 0.35s ease",
               }}
             >
               {mic.status === "off"
                 ? "── MIC OFF ──"
-                : mic.level > 0.03
+                : mic.enabled && uiSpeaking
                 ? "◉ SPEAKING / ACTIVE"
                 : "○ LISTENING / STILL"}
             </div>
@@ -223,6 +260,7 @@ export function OrbStudio() {
                   position: "absolute",
                   width: 12,
                   height: 12,
+                  zIndex: 4,
                   ...(pos.includes("t") ? { top: 12 } : { bottom: 12 }),
                   ...(pos.includes("l") ? { left: 16 } : { right: 16 }),
                   borderTop: pos.includes("t") ? "1px solid rgba(255,255,255,0.08)" : "none",
@@ -232,6 +270,8 @@ export function OrbStudio() {
                 }}
               />
             ))}
+
+            <GlobalCRTOverlay config={config} />
           </div>
 
           {/* ── Right panel ─────────────────────────────────────── */}

@@ -24,20 +24,6 @@ export function TerminalScreen({ children }: Props) {
         {children}
       </div>
 
-      {/* ── Scanlines ─────────────────────────────────────────── */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          inset: 0,
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.22) 3px, rgba(0,0,0,0.22) 4px)",
-          pointerEvents: "none",
-          zIndex: 9010,
-          mixBlendMode: "multiply",
-        }}
-      />
-
       {/* ── Animated noise grain ──────────────────────────────── */}
       <div
         aria-hidden

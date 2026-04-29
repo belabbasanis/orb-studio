@@ -116,7 +116,7 @@ export function ControlPanel({ config, onChange, onExport }: ControlPanelProps) 
       {/* ── INPUT ────────────────────────────────────── */}
       <SectionHeader label="INPUT" />
       <SliderRow label="Orb Size"         value={config.size}           min={120}  max={380}  onChange={(v) => onChange({ size: v })}           unit="px" />
-      <SliderRow label="Mic Sensitivity"  value={config.micSensitivity} min={0.1}  max={3.0}  step={0.1}   onChange={(v) => onChange({ micSensitivity: v })} />
+      <SliderRow label="Mic Sensitivity"  value={config.micSensitivity} min={0.1}  max={3.0}  step={0.05}   onChange={(v) => onChange({ micSensitivity: v })} />
       <SliderRow label="Noise Gate"       value={config.noiseGate}      min={0}    max={0.05} step={0.001} onChange={(v) => onChange({ noiseGate: v })} />
       <SliderRow label="Smoothing"        value={config.smoothing}      min={0}    max={0.99} step={0.01}  onChange={(v) => onChange({ smoothing: v })} />
 
@@ -124,9 +124,9 @@ export function ControlPanel({ config, onChange, onExport }: ControlPanelProps) 
 
       {/* ── FLUID DYNAMICS ───────────────────────────── */}
       <SectionHeader label="FLUID DYN" />
-      <SliderRow label="Shell Amplitude"  value={config.shellAmplitude} min={0}    max={0.10} step={0.001} onChange={(v) => onChange({ shellAmplitude: v })} />
+      <SliderRow label="Shell Amplitude"  value={config.shellAmplitude} min={0}    max={0.22} step={0.001} onChange={(v) => onChange({ shellAmplitude: v })} />
       <SliderRow label="Shell Speed"      value={config.shellSpeed}     min={0.02} max={0.5}  step={0.01}  onChange={(v) => onChange({ shellSpeed: v })} />
-      <SliderRow label="Turb Amplitude"   value={config.turbAmplitude}  min={0}    max={0.20} step={0.005} onChange={(v) => onChange({ turbAmplitude: v })} />
+      <SliderRow label="Turb Amplitude"   value={config.turbAmplitude}  min={0}    max={0.42} step={0.005} onChange={(v) => onChange({ turbAmplitude: v })} />
       <SliderRow label="Turb Speed"       value={config.turbSpeed}      min={0.3}  max={3.0}  step={0.1}   onChange={(v) => onChange({ turbSpeed: v })} />
       <SliderRow label="Pressure Curve"   value={config.pressureCurve}  min={0.2}  max={1.0}  step={0.05}  onChange={(v) => onChange({ pressureCurve: v })} />
       <SliderRow label="Phase Spread"     value={config.phaseSpread}    min={0}    max={12.0} step={0.1}   onChange={(v) => onChange({ phaseSpread: v })} />
@@ -135,10 +135,41 @@ export function ControlPanel({ config, onChange, onExport }: ControlPanelProps) 
 
       {/* ── CRT RENDER ───────────────────────────────── */}
       <SectionHeader label="CRT RENDER" />
-      <ColorRow label="Primary"    value={config.colors[0]}   onChange={(v) => onChange({ colors: [v, config.colors[1]] })} />
-      <ColorRow label="Secondary"  value={config.colors[1]}   onChange={(v) => onChange({ colors: [config.colors[0], v] })} />
+      <ColorRow
+        label="Spect deep"
+        value={config.colors[0]}
+        onChange={(v) =>
+          onChange({ colors: [v, config.colors[1], config.colors[2], config.colors[3]] })
+        }
+      />
+      <ColorRow
+        label="Spect mid"
+        value={config.colors[1]}
+        onChange={(v) =>
+          onChange({ colors: [config.colors[0], v, config.colors[2], config.colors[3]] })
+        }
+      />
+      <ColorRow
+        label="Spect bright"
+        value={config.colors[2]}
+        onChange={(v) =>
+          onChange({ colors: [config.colors[0], config.colors[1], v, config.colors[3]] })
+        }
+      />
+      <ColorRow
+        label="Spect rim"
+        value={config.colors[3]}
+        onChange={(v) =>
+          onChange({ colors: [config.colors[0], config.colors[1], config.colors[2], v] })
+        }
+      />
       <ColorRow label="Background" value={config.background}  onChange={(v) => onChange({ background: v })} />
       <SliderRow label="Core Bright"     value={config.coreBrightness} min={50}  max={150} onChange={(v) => onChange({ coreBrightness: v })} unit="%" />
+      <SliderRow label="Inner bloom"     value={config.innerBloom}     min={0}   max={2.5} step={0.05} onChange={(v) => onChange({ innerBloom: v })} />
+      <SliderRow label="Orb film grain"  value={config.shaderFilmGrain} min={0} max={0.15} step={0.005} onChange={(v) => onChange({ shaderFilmGrain: v })} />
+      <SliderRow label="Rim power"       value={config.rimPower}       min={1.4} max={6.0} step={0.1} onChange={(v) => onChange({ rimPower: v })} />
+      <SliderRow label="Rim intensity"   value={config.rimIntensity}   min={0.3} max={2.2} step={0.05} onChange={(v) => onChange({ rimIntensity: v })} />
+      <SliderRow label="Rim darken"      value={config.rimDarken}      min={0}   max={0.5} step={0.02} onChange={(v) => onChange({ rimDarken: v })} />
       <SliderRow label="Bloom Radius"    value={config.bloomRadius}    min={0}   max={100} onChange={(v) => onChange({ bloomRadius: v })} />
       <SliderRow label="Bloom Intensity" value={config.bloomIntensity} min={0}   max={100} onChange={(v) => onChange({ bloomIntensity: v })} />
       <SliderRow label="Phosphor Decay"  value={config.phosphorDecay}  min={0}   max={100} onChange={(v) => onChange({ phosphorDecay: v })} />

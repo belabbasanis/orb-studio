@@ -22,7 +22,8 @@ export interface CRTConfig {
 
 export interface OrbConfig {
   size: number;
-  colors: [string, string];
+  /** Spectral stops along 0→1: shadow/deep → mid → bright → rim accent */
+  colors: [string, string, string, string];
   background: string;
   micSensitivity: number;
   noiseGate: number;
@@ -35,6 +36,16 @@ export interface OrbConfig {
   scanFrequency: number;
   aberration: number;
   coreBrightness: number;
+  /** In-shader film grain strength (0…~0.15); separate from CRT overlay Grain */
+  shaderFilmGrain: number;
+  /** Dual-lobe inner glow strength (buried soft-body core) */
+  innerBloom: number;
+  /** Fresnel rim exponent (~1.5–6); higher = tighter silhouette */
+  rimPower: number;
+  /** Rim highlight multiplier */
+  rimIntensity: number;
+  /** Darkens base color at grazing angles (0–~0.5) for sharper shape read */
+  rimDarken: number;
   // fluid dynamics
   shellAmplitude: number;
   shellSpeed: number;

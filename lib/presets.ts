@@ -1,12 +1,17 @@
-import type { Preset } from "./types";
+import type { OrbConfig, Preset } from "./types";
 
-export const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG: OrbConfig = {
   size: 220,
-  colors: ["#EFFFFF", "#00AFFF"] as [string, string],
+  colors: ["#020810", "#0066AA", "#40DDFF", "#EFFFFF"] as [
+    string,
+    string,
+    string,
+    string,
+  ],
   background: "#02050b",
-  micSensitivity: 1.0,
-  noiseGate: 0.006,
-  smoothing: 0.72,
+  micSensitivity: 1.4,
+  noiseGate: 0.002,
+  smoothing: 0.46,
   bloomRadius: 82,
   bloomIntensity: 78,
   phosphorDecay: 68,
@@ -15,13 +20,17 @@ export const DEFAULT_CONFIG = {
   scanFrequency: 5,
   aberration: 2.6,
   coreBrightness: 96,
-  // fluid dynamics
-  shellAmplitude: 0.025,
-  shellSpeed: 0.15,
-  turbAmplitude: 0.10,
-  turbSpeed: 1.4,
-  pressureCurve: 0.6,
-  phaseSpread: 6.28,
+  shaderFilmGrain: 0.06,
+  innerBloom: 1.0,
+  rimPower: 3.2,
+  rimIntensity: 1.15,
+  rimDarken: 0.14,
+  shellAmplitude: 0.159,
+  shellSpeed: 0.18,
+  turbAmplitude: 0.42,
+  turbSpeed: 1.5,
+  pressureCurve: 0.3,
+  phaseSpread: 8.8,
 };
 
 export const PRESETS: Preset[] = [
@@ -33,7 +42,7 @@ export const PRESETS: Preset[] = [
     name: "Phosphor Green",
     config: {
       ...DEFAULT_CONFIG,
-      colors: ["#EFFFEF", "#00FF7F"],
+      colors: ["#052208", "#00AA55", "#66FFAA", "#EFFFEF"],
       background: "#010a03",
       bloomIntensity: 90,
       phosphorDecay: 80,
@@ -45,7 +54,7 @@ export const PRESETS: Preset[] = [
     name: "Amber Monitor",
     config: {
       ...DEFAULT_CONFIG,
-      colors: ["#FFF8E7", "#FF8C00"],
+      colors: ["#1a0a00", "#CC5500", "#FFAA44", "#FFF8E7"],
       background: "#0a0500",
       bloomIntensity: 72,
       phosphorDecay: 55,
@@ -58,7 +67,7 @@ export const PRESETS: Preset[] = [
     name: "Deep Void",
     config: {
       ...DEFAULT_CONFIG,
-      colors: ["#E0E8FF", "#4040FF"],
+      colors: ["#000018", "#3030AA", "#8090FF", "#E0E8FF"],
       background: "#000008",
       bloomRadius: 95,
       bloomIntensity: 85,
@@ -72,13 +81,13 @@ export const PRESETS: Preset[] = [
     name: "Magenta Burst",
     config: {
       ...DEFAULT_CONFIG,
-      colors: ["#FFE0FF", "#FF00AA"],
+      colors: ["#12000C", "#990077", "#FF55DD", "#FFE0FF"],
       background: "#080004",
       bloomRadius: 75,
       bloomIntensity: 88,
       phosphorDecay: 60,
       grain: 0.38,
-      scanlines: 0.30,
+      scanlines: 0.3,
       aberration: 2.2,
     },
   },
