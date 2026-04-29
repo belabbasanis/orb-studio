@@ -13,16 +13,41 @@ interface PresetsPanelProps {
   onPresetSelect: (name: string, config: OrbConfig) => void;
   onMicToggle: () => void;
   samples: number[];
-  children?: React.ReactNode; // equalizer slot
+  children?: React.ReactNode;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  off: "Mic: off",
-  requesting: "Requesting...",
-  live: "Listening",
-  "permission-denied": "Permission denied",
-  unsupported: "Not supported",
-  error: "Error",
+function LevelMeter({ level }: { level: number }) {
+  const total = 16;
+  const filled = Math.round(level * total);
+  return (
+    <span className="ph" style={{ letterSpacing: "0.05em", fontSize: 10 }}>
+      {Array.from({ length: total }, (_, i) =>
+        i < filled ? "█" : "░"
+      ).join("")}
+    </span>
+  );
+}
+
+function SectionHeader({ label }: { label: string }) {
+  const pad = 18 - label.length;
+  const dashes = "─".repeat(Math.max(pad, 2));
+  return (
+    <div
+      className="ph-mid"
+      style={{ fontSize: 10, letterSpacing: "0.12em", marginBottom: 6 }}
+    >
+      ── {label.toUpperCase()} {dashes}
+    </div>
+  );
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  off:              "MIC: OFF",
+  requesting:       "MIC: REQUESTING...",
+  live:             "MIC: LIVE",
+  "permission-denied": "MIC: DENIED",
+  unsupported:      "MIC: UNSUPPORTED",
+  error:            "MIC: ERROR",
 };
 
 export function PresetsPanel({
@@ -36,87 +61,101 @@ export function PresetsPanel({
   children,
 }: PresetsPanelProps) {
   const micLive = micStatus === "live";
-  const statusLabel =
+
+  const stateLabel =
     micLive && level > 0.03
-      ? "Speaking / Active"
+      ? "SPEAKING / ACTIVE"
       : micLive
-      ? "Listening / Still"
-      : STATUS_LABELS[micStatus] ?? micStatus;
+      ? "LISTENING / STILL"
+      : STATUS_LABEL[micStatus] ?? micStatus.toUpperCase();
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
-          Presets
-        </h2>
-        <div className="flex flex-col gap-1">
-          {PRESETS.map((p) => (
+    <div className="flex flex-col gap-0 h-full overflow-y-auto" style={{ paddingRight: 2 }}>
+
+      {/* ── PRESETS ─────────────────────────────────── */}
+      <SectionHeader label="PRESETS" />
+      <div className="flex flex-col gap-px mb-4">
+        {PRESETS.map((p) => {
+          const isActive = activePreset === p.name;
+          return (
             <button
               key={p.name}
               onClick={() => onPresetSelect(p.name, p.config)}
-              className={`text-left px-3 py-2 rounded text-sm transition-all ${
-                activePreset === p.name
-                  ? "bg-cyan-950 text-cyan-300 border border-cyan-700"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-              }`}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: "3px 0",
+                cursor: "pointer",
+                textAlign: "left",
+                fontFamily: "inherit",
+                fontSize: 11,
+                letterSpacing: "0.04em",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+              className={isActive ? "ph-hi" : "ph-lo"}
             >
-              {p.name}
+              <span style={{ width: 10, flexShrink: 0 }}>{isActive ? "▶" : " "}</span>
+              <span>{p.name}</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <div className="border-t border-slate-800 pt-4">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
-          Motion State
-        </h2>
+      <hr className="term-rule" />
+
+      {/* ── MOTION STATE ───────────────────────────── */}
+      <SectionHeader label="STATE" />
+      <div className="mb-4" style={{ paddingLeft: 4 }}>
         <div
-          className={`px-3 py-2 rounded text-sm border ${
-            agentState === "listening" || agentState === "speaking"
-              ? "border-cyan-700 text-cyan-300 bg-cyan-950/40"
-              : "border-slate-700 text-slate-500"
-          }`}
+          className={agentState === "idle" ? "ph-lo" : "ph-hi"}
+          style={{ fontSize: 11, letterSpacing: "0.08em" }}
         >
-          {agentState ?? "idle"}
+          {"> "}{agentState?.toUpperCase() ?? "IDLE"}
+          {(agentState === "listening" || agentState === "speaking") && (
+            <span style={{ animation: "cursor-blink 1s step-end infinite" }}>█</span>
+          )}
         </div>
       </div>
 
-      <div className="border-t border-slate-800 pt-4">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
-          Microphone
-        </h2>
+      <hr className="term-rule" />
+
+      {/* ── MICROPHONE ─────────────────────────────── */}
+      <SectionHeader label="MICROPHONE" />
+      <div className="flex flex-col gap-2 mb-4">
         <button
           onClick={onMicToggle}
-          className={`w-full px-3 py-2 rounded text-sm font-medium transition-all ${
-            micLive
-              ? "bg-red-900/60 border border-red-700 text-red-300 hover:bg-red-900"
-              : "bg-cyan-900/50 border border-cyan-700 text-cyan-300 hover:bg-cyan-900"
-          }`}
+          className={`term-btn ${micLive ? "danger" : "active"}`}
         >
-          {micLive ? "Stop Mic" : "Start Mic"}
+          {micLive ? "[ STOP MIC ]" : "[ START MIC ]"}
         </button>
+
         <div
-          className={`mt-2 text-xs px-1 ${
-            level > 0.03 ? "text-cyan-400" : "text-slate-500"
-          }`}
+          className={micLive && level > 0.03 ? "ph-hi" : "ph-lo"}
+          style={{ fontSize: 10, letterSpacing: "0.08em" }}
         >
-          {statusLabel}
+          {stateLabel}
         </div>
 
-        {/* Level meter */}
-        <div className="mt-2 h-1.5 bg-slate-800 rounded overflow-hidden">
-          <div
-            className="h-full bg-cyan-500 transition-all duration-75"
-            style={{ width: `${level * 100}%` }}
-          />
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span className="ph-lo" style={{ fontSize: 10 }}>LVL</span>
+          <LevelMeter level={level} />
         </div>
       </div>
 
-      <div className="border-t border-slate-800 pt-4 flex-1">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
-          Equalizer
-        </h2>
-        <div className="bg-slate-900/60 rounded p-2">{children}</div>
+      <hr className="term-rule" />
+
+      {/* ── EQUALIZER ──────────────────────────────── */}
+      <SectionHeader label="EQ" />
+      <div
+        style={{
+          background: "rgba(224,149,16,0.03)",
+          border: "1px solid var(--t-fg-lo)",
+          padding: "6px 4px",
+        }}
+      >
+        {children}
       </div>
     </div>
   );
