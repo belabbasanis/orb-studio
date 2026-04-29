@@ -192,6 +192,62 @@ export function ControlPanel({ config, onChange, onExport }: ControlPanelProps) 
         </div>
       </div>
 
+      <div className="border-t border-slate-800 pt-4">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">
+          Fluid Dynamics
+        </h2>
+        <div className="flex flex-col gap-3">
+          <SliderRow
+            label="Shell Amplitude"
+            value={config.shellAmplitude}
+            min={0}
+            max={0.10}
+            step={0.001}
+            onChange={(v) => onChange({ shellAmplitude: v })}
+          />
+          <SliderRow
+            label="Shell Speed"
+            value={config.shellSpeed}
+            min={0.02}
+            max={0.5}
+            step={0.01}
+            onChange={(v) => onChange({ shellSpeed: v })}
+          />
+          <SliderRow
+            label="Turb Amplitude"
+            value={config.turbAmplitude}
+            min={0}
+            max={0.20}
+            step={0.005}
+            onChange={(v) => onChange({ turbAmplitude: v })}
+          />
+          <SliderRow
+            label="Turb Speed"
+            value={config.turbSpeed}
+            min={0.3}
+            max={3.0}
+            step={0.1}
+            onChange={(v) => onChange({ turbSpeed: v })}
+          />
+          <SliderRow
+            label="Pressure Curve"
+            value={config.pressureCurve}
+            min={0.2}
+            max={1.0}
+            step={0.05}
+            onChange={(v) => onChange({ pressureCurve: v })}
+          />
+          <SliderRow
+            label="Phase Spread"
+            value={config.phaseSpread}
+            min={0}
+            max={12.0}
+            step={0.1}
+            onChange={(v) => onChange({ phaseSpread: v })}
+          />
+        </div>
+      </div>
+
       <div className="border-t border-slate-800 pt-4 mt-auto">
         <button
           onClick={onExport}

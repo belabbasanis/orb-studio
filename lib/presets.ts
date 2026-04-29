@@ -15,6 +15,13 @@ export const DEFAULT_CONFIG = {
   scanFrequency: 5,
   aberration: 2.6,
   coreBrightness: 96,
+  // fluid dynamics
+  shellAmplitude: 0.025,
+  shellSpeed: 0.15,
+  turbAmplitude: 0.10,
+  turbSpeed: 1.4,
+  pressureCurve: 0.6,
+  phaseSpread: 6.28,
 };
 
 export const PRESETS: Preset[] = [

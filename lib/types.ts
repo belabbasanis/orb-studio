@@ -35,6 +35,13 @@ export interface OrbConfig {
   scanFrequency: number;
   aberration: number;
   coreBrightness: number;
+  // fluid dynamics
+  shellAmplitude: number;
+  shellSpeed: number;
+  turbAmplitude: number;
+  turbSpeed: number;
+  pressureCurve: number;
+  phaseSpread: number;
 }
 
 export interface Preset {

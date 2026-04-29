@@ -113,6 +113,15 @@ export function OrbStudio() {
             agentState={agentState}
             seed={12345}
             size={config.size}
+            fluid={{
+              shellAmplitude: config.shellAmplitude,
+              shellSpeed:     config.shellSpeed,
+              turbAmplitude:  config.turbAmplitude,
+              turbSpeed:      config.turbSpeed,
+              pressureCurve:  config.pressureCurve,
+              phaseSpread:    config.phaseSpread,
+              coreBrightness: config.coreBrightness,
+            }}
           />
         </CRTOrbFrame>
 
